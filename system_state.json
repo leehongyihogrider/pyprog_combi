@@ -1,0 +1,5 @@
+{
+    "system": true,
+    "temp_humi": true,
+    "ldr": true
+}

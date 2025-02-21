@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Care System</title>
+    <style>
+        .section { display: none; }
+        .active { display: block; }
+        .nav-btn { margin: 10px; padding: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div>
+        <button class="nav-btn" onclick="showSection('control')">System Control</button>
+        <button class="nav-btn" onclick="showSection('servo')">Servo Settings</button>
+        <button class="nav-btn" onclick="showSection('tank')">Water Tank</button>
+    </div>
+
+    <!-- System Control Section -->
+    <div id="control" class="section active">
+        <h1>Plant Care System</h1>
+        <div class="status">
+            <p><strong>System Status:</strong> <span id="system-status">{{ "Enabled" if state.system else "Disabled" }}</span></p>
+            <p><strong>Temperature & Humidity:</strong> <span id="temp-humi-status">{{ "Enabled" if state.temperature_humidity else "Disabled" }}</span></p>
+            <p><strong>LDR Monitoring:</strong> <span id="ldr-status">{{ "Enabled" if state.ldr else "Disabled" }}</span></p>
+        </div>
+        <form id="toggle-form">
+            <button type="button" onclick="toggleSetting('system')">Toggle System</button>
+            <button type="button" onclick="toggleSetting('temperature_humidity')">Toggle Temp & Humi</button>
+            <button type="button" onclick="toggleSetting('ldr')">Toggle LDR</button>
+        </form>
+
+        <!-- Temperature Chart -->
+        <div class="chart">
+            <h3>Temperature (Field 1)</h3>
+            <iframe width="450" height="260" style="border: 1px solid #cccccc;" 
+                src="https://thingspeak.com/channels/2746200/charts/1?results=5&dynamic=true">
+            </iframe>
+        </div>
+
+        <!-- Humidity Chart -->
+        <div class="chart">
+            <h3>Humidity (Field 2)</h3>
+            <iframe width="450" height="260" style="border: 1px solid #cccccc;" 
+                src="https://thingspeak.com/channels/2746200/charts/2?results=5&dynamic=true">
+            </iframe>
+        </div>
+    </div>
+
+    <!-- Servo Settings Section -->
+    <div id="servo" class="section">
+        <h1>Set Servo Delay</h1>
+        <form action="/set_delay" method="POST">
+            <label>Delay (4-20s):</label>
+            <input type="number" name="sdelay" min="4" max="20" value="{{ sdelay }}" required>
+            <button type="submit">Set Delay</button>
+        </form>
+    </div>
+
+    <!-- Water Tank Section -->
+    <div id="tank" class="section">
+        <h1>Water Tank Monitor</h1>
+        <p>Days since last refill: <span id="days">{{ days if days != "N/A" else "Not Available" }}</span></p>
+        <p>Last Refill Time: <span id="last_refill_time">{{ last_refill if last_refill != "N/A" else "Not Available" }}</span></p>
+        <iframe width="450" height="260" style="border: 1px solid #cccccc;" 
+            src="https://thingspeak.com/channels/2746200/charts/3?results=5&dynamic=true">
+        </iframe>
+    </div>
+
+    <script>
+        // Toggle Visibility of Sections
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(div => div.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+        }
+
+        // Update Water Tank Data Every 5 Sec
+        function updateTankData() {
+            fetch('/update')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('days').textContent = data.days_since_refill || "Not Available";
+                    document.getElementById('last_refill_time').textContent = data.last_refill_timestamp || "Not Available";
+                });
+        }
+        setInterval(updateTankData, 5000);
+
+        // Toggle System Settings with AJAX (No Page Reload)
+        function toggleSetting(setting) {
+            fetch('/toggle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `toggle=${setting}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById(`${setting}-status`).textContent = data[setting] ? "Enabled" : "Disabled";
+            });
+        }
+    </script>
+</body>
+</html>
