@@ -128,19 +128,26 @@ def get_days_since_refill():
 # -----------------------------background threads--------------------------------------------------
 def sensor_loop():
     global last_temp_alert_time, last_humidity_alert_time
+
     while True:
         state = read_system_state()
+        print("[DEBUG] Current System State:", state)  # Debugging
+
         if not state["system"]:
+            print("[DEBUG] System is OFF. LCD should display OFF message.")
             lcd.lcd_clear()
             lcd.lcd_display_string("System OFF", 1)
             lcd.lcd_display_string("Enable in Web UI", 2)
             sleep(2)
             continue
 
+        print("[DEBUG] System is ON. Proceeding to sensor readings.")
         
         temp, humi = None, None
         if state["temperature_humidity"]:
             humi, temp = Adafruit_DHT.read(DHT_SENSOR, DHT_PIN)
+            print(f"[DEBUG] Temp: {temp}, Humidity: {humi}")  # Debugging
+
             if humi is not None and temp is not None:
                 upload_to_thingspeak(temp, humi)
                 
@@ -157,8 +164,9 @@ def sensor_loop():
             ldr_value = readadc(0)
             GPIO.output(24, ldr_value < 500)
 
-
+        print("[DEBUG] Updating LCD Display...")
         lcd.lcd_clear()
+        
         if temp is not None and humi is not None:
             lcd.lcd_display_string(f"T:{temp:.1f}C H:{humi:.1f}%", 1)
         else:
@@ -169,7 +177,9 @@ def sensor_loop():
         else:
             lcd.lcd_display_string("LDR:OFF", 2)
 
+        print("[DEBUG] LCD Updated Successfully")
         sleep(2)
+
 
 def moisture_detection():
     global sdelay
